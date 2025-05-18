@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Python Code Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.61.0/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.61.0/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.61.0/mode/python/python.min.js"></script>
+</head>
+<body>
+    <h1>Online Python Code Editor</h1>
+    <form id="codeForm">
+        <textarea id="codeEditor"></textarea>
+        <button type="submit">Run Code</button>
+    </form>
+    <h2>Output</h2>
+    <pre id="output"></pre>
+
+    <script>
+        // Initialize CodeMirror editor
+        var editor = CodeMirror.fromTextArea(document.getElementById("codeEditor"), {
+            mode: "python",
+            lineNumbers: true,
+            theme: "default"
+        });
+
+        document.getElementById('codeForm').onsubmit = function(event) {
+            event.preventDefault();
+            
+            // Get code from editor
+            var code = editor.getValue();
+
+            // Get input if any (for handling input() calls)
+            var input_data = prompt("Provide input if required:");
+
+            // Make AJAX request to execute code
+            fetch('/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code, input_data: input_data })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Show output or error
+                if (data.output) {
+                    document.getElementById('output').textContent = data.output;
+                } else if (data.error) {
+                    document.getElementById('output').textContent = 'Error: ' + data.error;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
