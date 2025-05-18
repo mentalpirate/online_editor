@@ -25,8 +25,12 @@ class CodeForm(FlaskForm):
 
 @app.route('/')
 def index():
+    default_code = '''# Online Python compiler (interpreter) to run Python online.
+# Write Python 3 code in this online editor and run it.
+print("Try Hello-world")'''
     form = CodeForm()
-    return render_template('index.html',form=form,output="")
+    form.code.data = default_code
+    return render_template('index.html', form=form, output="")
 
 @app.route('/execute', methods=['POST'])
 def execute_code():

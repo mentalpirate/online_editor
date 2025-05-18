@@ -11,7 +11,7 @@
 <body class="bg-light">
     <div class="container py-5">
         <div class="row justify-content-center">
-            <div class="col-lg-8 col-md-10">
+            <div class="col-lg-10 col-md-12"> <!-- Increased width -->
                 <div class="card shadow">
                     <div class="card-body">
                         <h1 class="card-title text-center mb-4">Online Python Code Editor</h1>
@@ -19,10 +19,12 @@
                             {{ form.csrf_token }}
                             <div class="mb-3">
                                 <label class="form-label">{{ form.code.label }}</label>
-                                {{ form.code(class="form-control") }}
+                                <div id="editor-wrapper" style="border: 2px solid #222; border-radius: 8px; background: #222; padding: 0.5rem;">
+                                    {{ form.code(class="form-control", style="min-height: 250px; background: #222; color: #fff;") }}
                             </div>
-                            <div class="d-grid">
-                                {{ form.submit(class="btn btn-primary") }}
+                            </div>
+                            <div class="text-end">
+                                {{ form.submit(class="btn btn-primary btn-large", style="width:100px;") }} <!-- Smaller button -->
                             </div>
                         </form>
                         <h3 class="mt-5">Output:</h3>
@@ -61,3 +63,18 @@ document.querySelector('form').addEventListener('submit', async function(e) {
 </script>
 </body>
 </html>
+<style>
+    /* Enhance CodeMirror appearance */
+    .CodeMirror {
+        min-height: 250px;
+        font-size: 1.1rem;
+        border-radius: 6px;
+        background: #222 !important;
+        color: #fff !important;
+        border: none;
+    }
+    .CodeMirror-scroll {
+        min-height: 250px;
+        background: #222 !important;
+    }
+</style>
