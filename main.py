@@ -31,7 +31,7 @@ def index():
 @app.route('/execute', methods=['POST'])
 def execute_code():
     form = CodeForm()
-    code = form.code.data
+    code = request.form.get('code', '')  # Get code from form data
     file_path = "temp_" + f'{random.randrange(1, 10**5):05}' + ".py"  # Unique file name to avoid collisions
     code_file = os.path.join(os.getcwd(), file_path)
     # input = form.code.input 
