@@ -77,28 +77,39 @@ def run_code(data):
     sid = request.sid
     rand_id = f'{random.randrange(1, 10**5):05}'
     code_file = f"temp_{rand_id}.py"
+    
     with open(code_file, 'w') as f:
         f.write(code)
 
-    # Start docker with PTY, attach stdin/stdout
     cmd = [
-        "docker", "run", "--rm", "-i", "-v", f"{os.getcwd()}:/code", "-w", "/code",
-        "python:3.9-slim", "python", code_file
+        "docker", "run", "--rm", "-i",
+        "-v", f"{os.getcwd()}:/code",
+        "-w", "/code",
+        "python:3.9-slim",
+        "python", code_file
     ]
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
+    
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        bufsize=0
+    )
     user_procs[sid] = proc
 
     def read_output():
         try:
             while True:
-                out = proc.stdout.read(1)
-                if not out:
+                output = proc.stdout.read(1)
+                if not output:
                     break
-                socketio.emit('terminal_output', out.decode('utf-8'), room=sid)
+                socketio.emit('terminal_output', output.decode('utf-8'), room=sid)
         finally:
             proc.stdout.close()
             os.remove(code_file)
             user_procs.pop(sid, None)
+            socketio.emit('terminal_output', '\n==Code Execution Finished==\n', room=sid)
 
     eventlet.spawn_n(read_output)
 
@@ -110,8 +121,10 @@ def on_input(data):
         try:
             proc.stdin.write(data.encode('utf-8'))
             proc.stdin.flush()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error writing to stdin: {e}")
+            socketio.emit('terminal_output', f"\nError: {str(e)}\n", room=sid)
+
 
     
     proc.wait()
