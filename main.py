@@ -1,9 +1,9 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 from flask_codemirror import CodeMirror
 from flask_codemirror.fields import CodeMirrorField
 from flask_wtf import FlaskForm
 from wtforms.fields import SubmitField
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import eventlet
 import eventlet.green.subprocess as subprocess
 import random
@@ -69,9 +69,12 @@ def execute_code():
 
 
 
+user_procs = {}
+
 @socketio.on('run_code')
 def run_code(data):
     code = data.get('code', '')
+    sid = request.sid
     rand_id = f'{random.randrange(1, 10**5):05}'
     code_file = f"temp_{rand_id}.py"
     with open(code_file, 'w') as f:
@@ -83,6 +86,7 @@ def run_code(data):
         "python:3.9-slim", "python", code_file
     ]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
+    user_procs[sid] = proc
 
     def read_output():
         try:
@@ -90,17 +94,21 @@ def run_code(data):
                 out = proc.stdout.read(1)
                 if not out:
                     break
-                socketio.emit('terminal_output', out.decode('utf-8'))
+                socketio.emit('terminal_output', out.decode('utf-8'), room=sid)
         finally:
             proc.stdout.close()
             os.remove(code_file)
+            user_procs.pop(sid, None)
 
     eventlet.spawn_n(read_output)
 
-    @socketio.on('terminal_input')
-    def on_input(input_data):
+@socketio.on('terminal_input')
+def on_input(data):
+    sid = request.sid
+    proc = user_procs.get(sid)
+    if proc and proc.stdin:
         try:
-            proc.stdin.write(input_data.encode('utf-8'))
+            proc.stdin.write(data.encode('utf-8'))
             proc.stdin.flush()
         except Exception:
             pass
@@ -110,4 +118,4 @@ def run_code(data):
     socketio.emit('terminal_output', '\n==Code Execution Finished==\n')       
 
 if __name__ == "__main__":
-    socketio.run(app,debug=True)
+    socketio.run(app, debug=True)
