@@ -7,6 +7,8 @@
     {{ codemirror.include_codemirror() }}
     <!-- Bootstrap CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Xterm.js CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
     <style>
         html, body {
             height: 100%;
@@ -48,18 +50,20 @@
             min-height: 70vh;
             background: #222 !important;
         }
-        #output-area {
+        #xterm-container {
             height: 70vh;
             min-height: 70vh;
             max-height: 70vh;
+            background: #222;
+            border-radius: 8px;
             margin-top: 0 !important;
+            padding: 0;
         }
         /* Align both panels vertically */
         .align-panels {
             display: flex;
             align-items: stretch;
         }
-       
         /* Style for right panel's input */
         #input-data {
             background: #222 !important;
@@ -119,7 +123,7 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Right Panel: Input + Output -->
+                        <!-- Right Panel: Input + Xterm.js Output -->
                         <div class="col-md-6 right-panel-content" style="padding-left: 18px;">
                             <div class="run-btn-top">
                                 {{ form.submit(class="btn btn-primary btn-sm", style="width:90px;") }}
@@ -127,7 +131,7 @@
                             <label for="input-data" class="form-label input-label">If your code takes input, give it here, else leave blank</label>
                             <textarea id="input-data" name="input_data" class="form-control form-control-sm" rows="2" placeholder="Enter input for your code here..."></textarea>
                             <h5 class="mt-3 mb-2">Output:</h5>
-                            <pre id="output-area" class="bg-dark text-white p-3 rounded flex-grow-1" style="overflow:auto;">{{ output }}</pre>
+                            <div id="xterm-container" class="p-2"></div>
                         </div>
                     </div>
                 </form>
@@ -136,7 +140,25 @@
     </div>
     <!-- Bootstrap JS Bundle CDN (optional, for interactivity) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Xterm.js JS -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.min.js"></script>
     <script>
+    // Initialize Xterm.js
+    const term = new window.Terminal({
+        theme: {
+            background: '#222',
+            foreground: '#fff'
+        },
+        fontSize: 15,
+        rows: 28,
+        cols: 80,
+        cursorBlink: false,
+        disableStdin: true
+    });
+    term.open(document.getElementById('xterm-container'));
+    term.write('\x1b[?25l')
+    term.clear();
+
     document.getElementById('code-form').addEventListener('submit', async function(e) {
         e.preventDefault(); // Prevent page reload
 
@@ -150,6 +172,9 @@
         const formData = new FormData(this);
         formData.set('input_data', document.getElementById('input-data').value);
 
+        // Clear previous terminal output
+        term.clear();
+
         const response = await fetch('/execute', {
             method: 'POST',
             body: formData
@@ -157,8 +182,12 @@
 
         const data = await response.json();
 
-        // Update the output area by id
-        document.getElementById('output-area').textContent = data.output || data.error || '';
+        // Write output to xterm.js terminal
+        if (data.output) {
+            term.write(data.output.replace(/\n/g, '\r\n') +  '\r\n==Code Execution Successfull==');
+        } else if (data.error) {
+            term.write(data.error.replace(/\n/g, '\r\n') + '\r\n==Code Execution Successfull==');
+        }
     });
     </script>
 </body>
