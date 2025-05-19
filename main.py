@@ -24,7 +24,22 @@ codemirror = CodeMirror(app)
 
 
 class CodeForm(FlaskForm):
-    code = CodeMirrorField(language='python', config={'lineNumbers': True})
+    code = CodeMirrorField(language='python',
+                            config={
+        'lineNumbers': True,
+        'matchBrackets': True,
+        'autoCloseBrackets': True,
+        'styleActiveLine': True,
+        'highlightSelectionMatches': True,
+        'theme': 'blackboard',
+        'mode': 'python',
+        'indentUnit': 4,
+        'tabSize': 4,
+        'lineWrapping': True,
+        'extraKeys': {"Tab": "indentMore", "Shift-Tab": "indentLess"},
+        'gutters': ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+        'foldGutter': True,
+        'lint': True})
     submit = SubmitField('RUN')
 
 
