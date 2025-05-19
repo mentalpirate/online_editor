@@ -128,7 +128,7 @@ def on_input(data):
 
     
     proc.wait()
-    socketio.emit('terminal_output', '\n==Code Execution Finished==\n')       
+    # socketio.emit('terminal_output', '\n==Code Execution Finished==\n')       
 
 if __name__ == "__main__":
     socketio.run(app, debug=True)

@@ -51,9 +51,9 @@
             background: #222 !important;
         }
         #xterm-container {
-            height: 70vh;
-            min-height: 70vh;
-            max-height: 70vh;
+            height: 75vh;  /* Increased height since we removed input area */
+            min-height: 75vh;
+            max-height: 75vh;
             background: #222;
             border-radius: 8px;
             margin-top: 0 !important;
@@ -62,7 +62,9 @@
         /* Align both panels vertically */
         .align-panels {
             display: flex;
-            align-items: stretch;
+            align-items: flex-start;  /* Align panels at the top */
+            margin-right: 8px;
+            margin-top: 0;           /* Remove any top margin */
         }
         /* Style for right panel's input */
         #input-data {
@@ -81,10 +83,21 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            justify-content: flex-start;
+            padding-top: 0;          /* Remove top padding */
         }
         .right-panel-content h5 {
-            margin-top: 1rem;
+            color: #333;
+            margin-top: 0;
+            width: 100%;
+        }
+        .right-panel-content .btn {
+            margin-left: 18px;  /* Match padding of parent */
+        }
+        /* Ensure consistent heights */
+        .col-md-6 {
+            min-height: 75vh;        /* Match panel heights */
+            display: flex;
+            flex-direction: column;
         }
         /* Remove extra margin from input label */
         .input-label {
@@ -117,20 +130,19 @@
                         <div class="col-md-6 border-end d-flex flex-column justify-content-stretch">
                             {{ form.csrf_token }}
                             <div class="mb-3 flex-grow-1 d-flex flex-column">
-                                <label class="form-label">{{ form.code.label }}</label>
+                                <h5 class="text-center mb-3">Write Your Code Below:</h5>
+                                <!-- <label class="form-label">{{ form.code.label }}</label> -->
                                 <div id="editor-wrapper" style="border: 2px solid #222; border-radius: 8px; background: #222; padding: 0.5rem; flex: 1;">
                                     {{ form.code(class="form-control", style="min-height: 70vh; background: #222; color: #fff;") }}
                                 </div>
+                                <div class="mt-3 mb-2">
+                                    {{ form.submit(class="btn btn-primary btn-sm", style="width:90px;") }}
+                                </div>
                             </div>
                         </div>
-                        <!-- Right Panel: Input + Xterm.js Output -->
-                        <div class="col-md-6 right-panel-content" style="padding-left: 18px;">
-                            <div class="run-btn-top">
-                                {{ form.submit(class="btn btn-primary btn-sm", style="width:90px;") }}
-                            </div>
-                            <label for="input-data" class="form-label input-label">If your code takes input, give it here, else leave blank</label>
-                            <textarea id="input-data" name="input_data" class="form-control form-control-sm" rows="2" placeholder="Enter input for your code here..."></textarea>
-                            <h5 class="mt-3 mb-2">Output:</h5>
+                        <!-- Right Panel: Xterm.js Output -->
+                        <div class="col-md-6 right-panel-content">
+                            <h5 class="text-center mb-3">Output:</h5>
                             <div id="xterm-container" class="p-2"></div>
                         </div>
                     </div>
@@ -153,6 +165,9 @@
             convertEol: true
         });
         term.open(document.getElementById('xterm-container'));
+        // hide cursor
+        term.write('\x1b[?25l');
+        
 
         const socket = io();
 
@@ -174,6 +189,8 @@
 
         // Display output from backend
         socket.on('terminal_output', function(data) {
+            //hide cursor
+            term.write('\x1b[?25l');
             term.write(data);
         });
 
@@ -184,15 +201,21 @@
 
             if (ev.keyCode === 13) { // Enter
                 term.write('\r\n');
+                // show cursor
+                term.write('\x1b[?25h');
                 socket.emit('terminal_input', currentInput + '\n');
                 currentInput = '';
             } else if (ev.keyCode === 8) { // Backspace
                 if (currentInput.length > 0) {
                     currentInput = currentInput.slice(0, -1);
+                    // show cursor
+                    term.write('\x1b[?25h');
                     term.write('\b \b');
                 }
             } else if (printable) {
                 currentInput += key;
+                // show cursor
+                term.write('\x1b[?25h');
                 term.write(key);
             }
         });
