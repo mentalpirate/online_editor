@@ -3,11 +3,16 @@ from flask_codemirror import CodeMirror
 from flask_codemirror.fields import CodeMirrorField
 from flask_wtf import FlaskForm
 from wtforms.fields import SubmitField
+from flask_socketio import SocketIO, emit
+import eventlet
+import eventlet.green.subprocess as subprocess
 import random
 import os
 
 app = Flask(__name__)
 app.config.from_object(__name__)
+socketio = SocketIO(app)
+
 with app.app_context():
     app.config['CODEMIRROR_SERVE_TEMPLATES'] = True
     app.config['CODEMIRROR_SERVE_STATIC'] = True
@@ -63,5 +68,46 @@ def execute_code():
         return jsonify({'error': str(e)})
 
 
+
+@socketio.on('run_code')
+def run_code(data):
+    code = data.get('code', '')
+    rand_id = f'{random.randrange(1, 10**5):05}'
+    code_file = f"temp_{rand_id}.py"
+    with open(code_file, 'w') as f:
+        f.write(code)
+
+    # Start docker with PTY, attach stdin/stdout
+    cmd = [
+        "docker", "run", "--rm", "-i", "-v", f"{os.getcwd()}:/code", "-w", "/code",
+        "python:3.9-slim", "python", code_file
+    ]
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
+
+    def read_output():
+        try:
+            while True:
+                out = proc.stdout.read(1)
+                if not out:
+                    break
+                socketio.emit('terminal_output', out.decode('utf-8'))
+        finally:
+            proc.stdout.close()
+            os.remove(code_file)
+
+    eventlet.spawn_n(read_output)
+
+    @socketio.on('terminal_input')
+    def on_input(input_data):
+        try:
+            proc.stdin.write(input_data.encode('utf-8'))
+            proc.stdin.flush()
+        except Exception:
+            pass
+
+    
+    proc.wait()
+    socketio.emit('terminal_output', '\n==Code Execution Finished==\n')       
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    socketio.run(app,debug=True)

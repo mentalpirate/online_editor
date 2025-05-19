@@ -142,6 +142,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Xterm.js JS -->
     <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
     // Initialize Xterm.js
     const term = new window.Terminal({
@@ -152,42 +153,35 @@
         fontSize: 15,
         rows: 28,
         cols: 80,
-        cursorBlink: false,
-        disableStdin: true
+        cursorBlink: true,
+        disableStdin: false
     });
     term.open(document.getElementById('xterm-container'));
-    term.write('\x1b[?25l')
     term.clear();
+    // term.write('\x1b[?25l'); // Hide cursor initially
+    const socket = io();
 
-    document.getElementById('code-form').addEventListener('submit', async function(e) {
-        e.preventDefault(); // Prevent page reload
-
-        // Get the CodeMirror instance and update the textarea
+    document.getElementById('code-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        term.clear();
+        // Get code from CodeMirror
+        let code = '';
         if (window.CodeMirror) {
             var editor = document.querySelector('.CodeMirror').CodeMirror;
-            document.querySelector('textarea[name="code"]').value = editor.getValue();
+            code = editor.getValue();
         }
+        socket.emit('run_code', { code: code });
+    });
 
-        // Add input_data from the right panel to the form data
-        const formData = new FormData(this);
-        formData.set('input_data', document.getElementById('input-data').value);
+    // Display output from backend
+    socket.on('terminal_output', function(data) {
+        term.write(data.replace(/\n/g, '\r\n'));
 
-        // Clear previous terminal output
-        term.clear();
+    });
 
-        const response = await fetch('/execute', {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        // Write output to xterm.js terminal
-        if (data.output) {
-            term.write(data.output.replace(/\n/g, '\r\n') +  '\r\n==Code Execution Successfull==');
-        } else if (data.error) {
-            term.write(data.error.replace(/\n/g, '\r\n') + '\r\n==Code Execution Successfull==');
-        }
+    // Send user input to backend
+    term.onData(function(data) {
+        socket.emit('terminal_input', data);
     });
     </script>
 </body>
