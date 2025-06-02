@@ -11,3 +11,6 @@ __pycache__/
 *.temp
 temp_*
 *.py.out
+
+# other files
+codeeditor.zip
